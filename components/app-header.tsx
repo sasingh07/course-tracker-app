@@ -11,7 +11,7 @@ export function AppHeader({ email }: { email?: string }) {
         </Link>
         <nav className="flex gap-4 text-sm text-muted">
           <Link href="/" className="hover:text-foreground">
-            Home
+            Assignments
           </Link>
           <Link href="/courses" className="hover:text-foreground">
             Courses
