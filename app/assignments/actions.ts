@@ -3,10 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  validateAssignment,
+  type AssignmentInput,
+  type FieldErrors,
+} from "@/lib/validation";
 
-export type AssignmentFormState = { error?: string };
+export type AssignmentFormState = {
+  error?: string;
+  fieldErrors?: FieldErrors;
+  // What the user typed, so the form can show it again after an error.
+  values?: AssignmentInput;
+  // Changes on every failed save, so the form remounts with `values`.
+  attempt?: number;
+};
 
-function readAssignment(formData: FormData) {
+function readAssignment(formData: FormData): AssignmentInput {
   const notes = String(formData.get("notes") ?? "").trim();
   return {
     course_id: String(formData.get("course_id") ?? ""),
@@ -21,15 +33,21 @@ export async function createAssignment(
   _prev: AssignmentFormState,
   formData: FormData,
 ): Promise<AssignmentFormState> {
+  const values = readAssignment(formData);
+  const fieldErrors = validateAssignment(values);
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors, values, attempt: Date.now() };
+  }
+
   const supabase = await createClient();
   // user_id is filled in by the database (default auth.uid()).
   const { data, error } = await supabase
     .from("assignments")
-    .insert(readAssignment(formData))
+    .insert(values)
     .select("id")
     .single();
   if (error) {
-    return { error: "Couldn't save the assignment. Please try again." };
+    return { error: "Couldn't save the assignment. Please try again.", values, attempt: Date.now() };
   }
   revalidatePath("/");
   redirect(`/assignments/${data.id}`);
@@ -40,13 +58,16 @@ export async function updateAssignment(
   _prev: AssignmentFormState,
   formData: FormData,
 ): Promise<AssignmentFormState> {
+  const values = readAssignment(formData);
+  const fieldErrors = validateAssignment(values);
+  if (Object.keys(fieldErrors).length > 0) {
+    return { fieldErrors, values, attempt: Date.now() };
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("assignments")
-    .update(readAssignment(formData))
-    .eq("id", id);
+  const { error } = await supabase.from("assignments").update(values).eq("id", id);
   if (error) {
-    return { error: "Couldn't save your changes. Please try again." };
+    return { error: "Couldn't save your changes. Please try again.", values, attempt: Date.now() };
   }
   revalidatePath("/");
   redirect(`/assignments/${id}`);

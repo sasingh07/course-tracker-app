@@ -6,6 +6,8 @@ import { COURSE_COLORS } from "./colors";
 
 const inputClass =
   "rounded-md border border-white/10 bg-background px-3 py-2 outline-none focus:border-accent";
+const inputErrorClass =
+  "rounded-md border border-red-400 bg-background px-3 py-2 outline-none focus:border-accent";
 
 export function CourseForm() {
   const [state, formAction, pending] = useActionState<CourseFormState, FormData>(
@@ -14,7 +16,7 @@ export function CourseForm() {
   );
 
   return (
-    // Changing the key after a successful save clears the form.
+    // Remount after every submit: cleared after a save, or showing `values` after an error.
     <form
       key={state.savedAt ?? 0}
       action={formAction}
@@ -25,15 +27,36 @@ export function CourseForm() {
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm">
           Name *
-          <input name="name" placeholder="Intro to Coding" className={inputClass} />
+          <input
+            name="name"
+            placeholder="Intro to Coding"
+            defaultValue={state.values?.name}
+            aria-invalid={Boolean(state.nameError)}
+            aria-describedby="name-error"
+            className={state.nameError ? inputErrorClass : inputClass}
+          />
+          {state.nameError && (
+            <span id="name-error" role="alert" className="text-sm text-red-400">
+              {state.nameError}
+            </span>
+          )}
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Code
-          <input name="code" placeholder="UGBA 196" className={inputClass} />
+          <input
+            name="code"
+            placeholder="UGBA 196"
+            defaultValue={state.values?.code}
+            className={inputClass}
+          />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           Instructor
-          <input name="instructor" className={inputClass} />
+          <input
+            name="instructor"
+            defaultValue={state.values?.instructor}
+            className={inputClass}
+          />
         </label>
       </div>
 
@@ -46,7 +69,9 @@ export function CourseForm() {
                 type="radio"
                 name="color"
                 value={color}
-                defaultChecked={i === 0}
+                defaultChecked={
+                  state.values ? state.values.color === color : i === 0
+                }
                 className="peer sr-only"
               />
               <span
