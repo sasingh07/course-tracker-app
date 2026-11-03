@@ -16,6 +16,9 @@ export function AppHeader({ email }: { email?: string }) {
           <Link href="/courses" className="hover:text-foreground">
             Courses
           </Link>
+          <Link href="/dashboard" className="hover:text-foreground">
+            Dashboard
+          </Link>
         </nav>
       </div>
       <div className="flex items-center gap-4 text-sm">
