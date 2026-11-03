@@ -1,7 +1,14 @@
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { AppHeader } from "@/components/app-header";
-import { computeStats, todayInBerkeley, weekLabel, weekStartOf } from "@/lib/stats";
+import {
+  computeStats,
+  todayInBerkeley,
+  upcomingCrunchWeeks,
+  weekLabel,
+  weekStartOf,
+} from "@/lib/stats";
+import { CrunchBanner } from "@/components/crunch-banner";
 import { WeeklyChart } from "./weekly-chart";
 
 export default function DashboardPage() {
@@ -22,6 +29,7 @@ async function Dashboard() {
   const today = todayInBerkeley();
   const stats = computeStats(data ?? [], today);
   const thisWeekLabel = weekLabel(weekStartOf(today));
+  const crunchWeeks = upcomingCrunchWeeks(data ?? [], today);
 
   return (
     <>
@@ -33,6 +41,8 @@ async function Dashboard() {
           Couldn&apos;t load your assignments. Please refresh the page.
         </p>
       )}
+
+      <CrunchBanner weeks={crunchWeeks} />
 
       <div className="mb-8 grid gap-4 sm:grid-cols-2">
         <StatCard label="Due this week" value={String(stats.dueThisWeek)} />
