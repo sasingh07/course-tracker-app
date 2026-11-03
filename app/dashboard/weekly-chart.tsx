@@ -5,6 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Legend,
   ReferenceLine,
   ResponsiveContainer,
@@ -12,12 +13,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { WeekBucket } from "@/lib/stats";
+import { CRUNCH_HOURS, type WeekBucket } from "@/lib/stats";
 
 // Colors match the dark theme in app/globals.css.
 const DONE_COLOR = "#4ade80";
 const NOT_DONE_COLOR = "#6e79f2";
 const MUTED = "#8b8b96";
+const CRUNCH_COLOR = "#f87171"; // crunch weeks (feature 9)
 
 type Measure = "count" | "hours";
 
@@ -40,7 +42,10 @@ export function WeeklyChart({
           <h2 className="mb-1 font-medium">
             {hours ? "Estimated hours due per week" : "Assignments due per week"}
           </h2>
-          <p className="text-sm text-muted">Fall 2026, weeks start on Monday</p>
+          <p className="text-sm text-muted">
+            Fall 2026, weeks start on Monday.{" "}
+            <span className="text-red-400">Red</span> = crunch week (over {CRUNCH_HOURS}h).
+          </p>
         </div>
         <div
           role="group"
@@ -98,6 +103,19 @@ export function WeeklyChart({
               strokeDasharray="4 4"
               label={{ value: "This week", fill: MUTED, fontSize: 11, position: "top" }}
             />
+            {hours && (
+              <ReferenceLine
+                y={CRUNCH_HOURS}
+                stroke={CRUNCH_COLOR}
+                strokeDasharray="4 4"
+                label={{
+                  value: `${CRUNCH_HOURS}h`,
+                  fill: CRUNCH_COLOR,
+                  fontSize: 11,
+                  position: "insideTopLeft",
+                }}
+              />
+            )}
             <Bar
               dataKey={hours ? "doneHours" : "done"}
               name={hours ? "Done (hours)" : "Done"}
@@ -110,7 +128,14 @@ export function WeeklyChart({
               stackId="due"
               fill={NOT_DONE_COLOR}
               radius={[4, 4, 0, 0]}
-            />
+            >
+              {weeks.map((week) => (
+                <Cell
+                  key={week.weekStart}
+                  fill={week.crunch ? CRUNCH_COLOR : NOT_DONE_COLOR}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>

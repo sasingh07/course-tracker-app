@@ -7,6 +7,9 @@
 export const SEMESTER_START = "2026-08-24";
 export const SEMESTER_END = "2026-12-18";
 
+// A week with MORE than this many estimated hours due is a crunch week (feature 9).
+export const CRUNCH_HOURS = 15;
+
 // "This week" is decided in Berkeley's time zone, not the server's.
 export const TIME_ZONE = "America/Los_Angeles";
 
@@ -23,6 +26,7 @@ export type WeekBucket = {
   notDone: number;
   doneHours: number;
   notDoneHours: number;
+  crunch: boolean; // more than CRUNCH_HOURS due this week (done or not)
 };
 
 export type DashboardStats = {
@@ -97,6 +101,7 @@ export function computeStats(assignments: StatsInput[], today: string): Dashboar
       notDone: 0,
       doneHours: 0,
       notDoneHours: 0,
+      crunch: false,
     });
   }
   for (const a of assignments) {
@@ -112,6 +117,9 @@ export function computeStats(assignments: StatsInput[], today: string): Dashboar
     }
   }
   const weeks = [...byWeek.values()];
+  for (const week of weeks) {
+    week.crunch = isCrunch(week.doneHours + week.notDoneHours);
+  }
 
   // Busiest week from this week onward (earliest one wins a tie).
   let busiestWeek: DashboardStats["busiestWeek"] = null;
@@ -130,6 +138,26 @@ export function computeStats(assignments: StatsInput[], today: string): Dashboar
     busiestWeek,
     weeks,
   };
+}
+
+export function isCrunch(hours: number) {
+  return hours > CRUNCH_HOURS;
+}
+
+// Crunch weeks from this week onward, soonest first. All hours due that
+// week count, done or not (PLAN.md: "more than 15 estimated hours due").
+export function upcomingCrunchWeeks(assignments: StatsInput[], today: string) {
+  const thisWeek = weekStartOf(today);
+  const hoursByWeek = new Map<string, number>();
+  for (const a of assignments) {
+    const week = weekStartOf(a.due_date);
+    if (week < thisWeek) continue;
+    hoursByWeek.set(week, (hoursByWeek.get(week) ?? 0) + Number(a.estimated_hours ?? 0));
+  }
+  return [...hoursByWeek.entries()]
+    .filter(([, hours]) => isCrunch(hours))
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([weekStart, hours]) => ({ weekStart, label: weekLabel(weekStart), hours }));
 }
 
 // Total estimated hours; assignments without an estimate count as 0.

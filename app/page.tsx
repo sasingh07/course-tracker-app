@@ -17,6 +17,8 @@ import {
 import { DoneCheckbox } from "@/app/assignments/done-checkbox";
 import { StarButton } from "@/app/assignments/star-button";
 import { Toolbar } from "@/app/assignments/toolbar";
+import { CrunchBanner } from "@/components/crunch-banner";
+import { todayInBerkeley, upcomingCrunchWeeks } from "@/lib/stats";
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
@@ -48,13 +50,16 @@ async function AssignmentList({
       : query.order("due_date").order("created_at");
 
   // Row Level Security means all of these only return the logged-in user's rows.
-  const [{ data, error }, { data: stars }, { data: courses }, { count: total }] =
+  const [{ data, error }, { data: stars }, { data: courses }, { data: workload }] =
     await Promise.all([
       query,
       supabase.from("stars").select("assignment_id"),
       supabase.from("courses").select("id, name").order("name"),
-      supabase.from("assignments").select("id", { count: "exact", head: true }),
+      // Every assignment (ignoring filters), for the total and the crunch warning.
+      supabase.from("assignments").select("due_date, is_done, estimated_hours"),
     ]);
+  const total = workload?.length ?? 0;
+  const crunchWeeks = upcomingCrunchWeeks(workload ?? [], todayInBerkeley());
   const starredIds = new Set((stars ?? []).map((s) => s.assignment_id as string));
   const matching = (data ?? []) as unknown as Assignment[];
   const assignments = filters.starred
@@ -74,9 +79,11 @@ async function AssignmentList({
         </Link>
       </div>
 
+      <CrunchBanner weeks={crunchWeeks} showDashboardLink />
+
       <nav className="mb-4 flex gap-1 text-sm" aria-label="Filter assignments">
         <ViewTab href={filtersToHref({ ...filters, starred: false })} active={!filters.starred}>
-          All ({total ?? 0})
+          All ({total})
         </ViewTab>
         <ViewTab href={filtersToHref({ ...filters, starred: true })} active={filters.starred}>
           Starred ★ ({starredIds.size})
