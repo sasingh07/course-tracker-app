@@ -71,12 +71,20 @@ async function AssignmentList({
       <AppHeader email={email} />
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Assignments</h1>
-        <Link
-          href="/assignments/new"
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-        >
-          + New assignment
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/assignments/import"
+            className="rounded-md border border-white/10 px-4 py-2 text-sm hover:bg-surface"
+          >
+            Import CSV
+          </Link>
+          <Link
+            href="/assignments/new"
+            className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            + New assignment
+          </Link>
+        </div>
       </div>
 
       <CrunchBanner weeks={crunchWeeks} showDashboardLink />
