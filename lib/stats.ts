@@ -10,19 +10,26 @@ export const SEMESTER_END = "2026-12-18";
 // "This week" is decided in Berkeley's time zone, not the server's.
 export const TIME_ZONE = "America/Los_Angeles";
 
-export type StatsInput = { due_date: string; is_done: boolean };
+export type StatsInput = {
+  due_date: string;
+  is_done: boolean;
+  estimated_hours?: number | null; // feature 8
+};
 
 export type WeekBucket = {
   weekStart: string; // the Monday, "YYYY-MM-DD"
   label: string; // "Nov 16"
   done: number;
   notDone: number;
+  doneHours: number;
+  notDoneHours: number;
 };
 
 export type DashboardStats = {
   dueThisWeek: number;
   doneThisWeek: number;
   percentDoneThisWeek: number | null; // null when nothing is due this week
+  hoursThisWeek: number; // estimated hours due this week (blank counts as 0)
   busiestWeek: { weekStart: string; label: string; count: number } | null;
   weeks: WeekBucket[];
 };
@@ -70,6 +77,7 @@ export function computeStats(assignments: StatsInput[], today: string): Dashboar
   const doneThisWeek = thisWeeks.filter((a) => a.is_done).length;
   const percentDoneThisWeek =
     dueThisWeek === 0 ? null : Math.round((doneThisWeek / dueThisWeek) * 100);
+  const hoursThisWeek = sumHours(thisWeeks);
 
   // One bucket per week, from the semester's first week to its last
   // (stretched if any assignment falls outside the semester).
@@ -82,13 +90,26 @@ export function computeStats(assignments: StatsInput[], today: string): Dashboar
 
   const byWeek = new Map<string, WeekBucket>();
   for (let week = firstWeek; week <= lastWeek; week = addDays(week, 7)) {
-    byWeek.set(week, { weekStart: week, label: weekLabel(week), done: 0, notDone: 0 });
+    byWeek.set(week, {
+      weekStart: week,
+      label: weekLabel(week),
+      done: 0,
+      notDone: 0,
+      doneHours: 0,
+      notDoneHours: 0,
+    });
   }
   for (const a of assignments) {
     const bucket = byWeek.get(weekStartOf(a.due_date));
     if (!bucket) continue;
-    if (a.is_done) bucket.done += 1;
-    else bucket.notDone += 1;
+    const hours = Number(a.estimated_hours ?? 0);
+    if (a.is_done) {
+      bucket.done += 1;
+      bucket.doneHours += hours;
+    } else {
+      bucket.notDone += 1;
+      bucket.notDoneHours += hours;
+    }
   }
   const weeks = [...byWeek.values()];
 
@@ -101,5 +122,17 @@ export function computeStats(assignments: StatsInput[], today: string): Dashboar
     }
   }
 
-  return { dueThisWeek, doneThisWeek, percentDoneThisWeek, busiestWeek, weeks };
+  return {
+    dueThisWeek,
+    doneThisWeek,
+    percentDoneThisWeek,
+    hoursThisWeek,
+    busiestWeek,
+    weeks,
+  };
+}
+
+// Total estimated hours; assignments without an estimate count as 0.
+export function sumHours(assignments: StatsInput[]) {
+  return assignments.reduce((total, a) => total + Number(a.estimated_hours ?? 0), 0);
 }

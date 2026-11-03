@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { AppHeader } from "@/components/app-header";
-import { ASSIGNMENT_COLUMNS, formatDueDate, type Assignment } from "../shared";
+import { ASSIGNMENT_COLUMNS, formatDueDate, formatHours, type Assignment } from "../shared";
 import { DeleteButton } from "../delete-button";
 import { StarButton } from "../star-button";
 
@@ -52,7 +52,7 @@ async function AssignmentDetail({ params }: { params: Promise<{ id: string }> })
           </div>
         </div>
 
-        <dl className="grid grid-cols-3 gap-4 text-sm">
+        <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
           <div>
             <dt className="text-muted">Type</dt>
             <dd className="capitalize">{assignment.type}</dd>
@@ -60,6 +60,10 @@ async function AssignmentDetail({ params }: { params: Promise<{ id: string }> })
           <div>
             <dt className="text-muted">Due</dt>
             <dd>{formatDueDate(assignment.due_date)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted">Estimated</dt>
+            <dd>{formatHours(assignment.estimated_hours) || "—"}</dd>
           </div>
           <div>
             <dt className="text-muted">Status</dt>
