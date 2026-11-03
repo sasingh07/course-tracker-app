@@ -8,6 +8,7 @@ import {
   type AssignmentInput,
   type FieldErrors,
 } from "@/lib/validation";
+import { checkRows, MAX_IMPORT_ROWS, type CsvRow } from "@/lib/csv-import";
 
 export type AssignmentFormState = {
   error?: string;
@@ -80,6 +81,46 @@ export async function updateAssignment(
   }
   revalidatePath("/");
   redirect(`/assignments/${id}`);
+}
+
+export type ImportResult = { imported: number; skipped: number; error?: string };
+
+// CSV import (feature 10). Re-checks every row on the server (the browser
+// preview could be skipped), saves the good rows, and skips the bad ones.
+export async function importAssignments(
+  courseId: string,
+  rows: CsvRow[],
+): Promise<ImportResult> {
+  if (!courseId) {
+    return { imported: 0, skipped: rows.length, error: "Please choose a course." };
+  }
+  if (rows.length > MAX_IMPORT_ROWS) {
+    return {
+      imported: 0,
+      skipped: rows.length,
+      error: `Please import at most ${MAX_IMPORT_ROWS} rows at a time.`,
+    };
+  }
+
+  const checked = checkRows(rows, courseId);
+  const good = checked.filter((row) => row.errors.length === 0);
+  if (good.length > 0) {
+    const supabase = await createClient();
+    // Row Level Security rejects the whole batch if the course isn't the user's.
+    const { error } = await supabase
+      .from("assignments")
+      .insert(good.map((row) => toRow(row.input)));
+    if (error) {
+      return {
+        imported: 0,
+        skipped: rows.length,
+        error: "Couldn't save the assignments. Please try again.",
+      };
+    }
+  }
+
+  revalidatePath("/");
+  return { imported: good.length, skipped: checked.length - good.length };
 }
 
 export async function deleteAssignment(id: string) {
