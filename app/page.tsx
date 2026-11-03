@@ -7,8 +7,15 @@ import {
   formatDueDate,
   type Assignment,
 } from "@/app/assignments/shared";
+import {
+  escapeLike,
+  filtersToHref,
+  hasActiveFilters,
+  parseFilters,
+} from "@/app/assignments/filters";
 import { DoneCheckbox } from "@/app/assignments/done-checkbox";
 import { StarButton } from "@/app/assignments/star-button";
+import { Toolbar } from "@/app/assignments/toolbar";
 
 export default function Home({ searchParams }: PageProps<"/">) {
   return (
@@ -26,24 +33,32 @@ async function AssignmentList({
 }: {
   searchParams: PageProps<"/">["searchParams"];
 }) {
-  const { view } = await searchParams;
-  const showStarred = view === "starred";
+  const filters = parseFilters(await searchParams);
   const { supabase, email } = await requireUser();
 
-  // Row Level Security means both only return the logged-in user's rows.
-  const [{ data, error }, { data: stars }] = await Promise.all([
-    supabase
-      .from("assignments")
-      .select(ASSIGNMENT_COLUMNS)
-      .order("due_date")
-      .order("created_at"),
-    supabase.from("stars").select("assignment_id"),
-  ]);
-  const allAssignments = (data ?? []) as unknown as Assignment[];
+  // Search, course, and status are filtered by the database.
+  let query = supabase.from("assignments").select(ASSIGNMENT_COLUMNS);
+  if (filters.q) query = query.ilike("title", `%${escapeLike(filters.q)}%`);
+  if (filters.course) query = query.eq("course_id", filters.course);
+  if (filters.status !== "all") query = query.eq("is_done", filters.status === "done");
+  query =
+    filters.sort === "newest"
+      ? query.order("created_at", { ascending: false })
+      : query.order("due_date").order("created_at");
+
+  // Row Level Security means all of these only return the logged-in user's rows.
+  const [{ data, error }, { data: stars }, { data: courses }, { count: total }] =
+    await Promise.all([
+      query,
+      supabase.from("stars").select("assignment_id"),
+      supabase.from("courses").select("id, name").order("name"),
+      supabase.from("assignments").select("id", { count: "exact", head: true }),
+    ]);
   const starredIds = new Set((stars ?? []).map((s) => s.assignment_id as string));
-  const assignments = showStarred
-    ? allAssignments.filter((a) => starredIds.has(a.id))
-    : allAssignments;
+  const matching = (data ?? []) as unknown as Assignment[];
+  const assignments = filters.starred
+    ? matching.filter((a) => starredIds.has(a.id))
+    : matching;
 
   return (
     <>
@@ -59,13 +74,15 @@ async function AssignmentList({
       </div>
 
       <nav className="mb-4 flex gap-1 text-sm" aria-label="Filter assignments">
-        <ViewTab href="/" active={!showStarred}>
-          All ({allAssignments.length})
+        <ViewTab href={filtersToHref({ ...filters, starred: false })} active={!filters.starred}>
+          All ({total ?? 0})
         </ViewTab>
-        <ViewTab href="/?view=starred" active={showStarred}>
+        <ViewTab href={filtersToHref({ ...filters, starred: true })} active={filters.starred}>
           Starred ★ ({starredIds.size})
         </ViewTab>
       </nav>
+
+      <Toolbar filters={filters} courses={courses ?? []} />
 
       {error && (
         <p role="alert" className="mb-6 text-sm text-red-400">
@@ -73,21 +90,14 @@ async function AssignmentList({
         </p>
       )}
 
-      {!error && assignments.length === 0 && !showStarred && (
-        <p className="text-muted">
-          No assignments yet. Click &ldquo;New assignment&rdquo; to add one (you&apos;ll
-          need at least one{" "}
-          <Link href="/courses" className="text-accent hover:underline">
-            course
-          </Link>
-          ).
-        </p>
-      )}
-
-      {!error && assignments.length === 0 && showStarred && (
-        <p className="text-muted">
-          No starred assignments yet. Click ☆ next to a midterm or project to star it.
-        </p>
+      {!error && assignments.length === 0 && (
+        <EmptyMessage
+          noAssignmentsYet={!total}
+          noStarsYet={filters.starred && starredIds.size === 0}
+          starred={filters.starred}
+          filtered={hasActiveFilters(filters)}
+          clearHref={filtersToHref({ ...filters, q: "", course: "", status: "all" })}
+        />
       )}
 
       {assignments.length > 0 && (
@@ -120,6 +130,59 @@ async function AssignmentList({
         </ul>
       )}
     </>
+  );
+}
+
+function EmptyMessage({
+  noAssignmentsYet,
+  noStarsYet,
+  starred,
+  filtered,
+  clearHref,
+}: {
+  noAssignmentsYet: boolean;
+  noStarsYet: boolean;
+  starred: boolean;
+  filtered: boolean;
+  clearHref: string;
+}) {
+  if (noAssignmentsYet) {
+    return (
+      <p className="text-muted">
+        No assignments yet. Click &ldquo;New assignment&rdquo; to add one (you&apos;ll
+        need at least one{" "}
+        <Link href="/courses" className="text-accent hover:underline">
+          course
+        </Link>
+        ).
+      </p>
+    );
+  }
+  if (noStarsYet) {
+    return (
+      <p className="text-muted">
+        No starred assignments yet. Click ☆ next to a midterm or project to star it.
+      </p>
+    );
+  }
+  if (filtered) {
+    return (
+      <p className="text-muted">
+        No {starred ? "starred " : ""}assignments match these filters.{" "}
+        <Link href={clearHref} className="text-accent hover:underline">
+          Clear filters
+        </Link>
+      </p>
+    );
+  }
+  // Default view (not-done only) is empty: everything is finished.
+  return (
+    <p className="text-muted">
+      Nothing left to do 🎉{" "}
+      <Link href={clearHref} className="text-accent hover:underline">
+        Show finished {starred ? "starred " : ""}assignments
+      </Link>
+    </p>
   );
 }
 
