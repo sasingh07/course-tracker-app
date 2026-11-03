@@ -80,6 +80,20 @@ export async function deleteAssignment(id: string) {
   redirect("/");
 }
 
+// Adds or removes this user's row in the stars table.
+export async function setStarred(assignmentId: string, starred: boolean) {
+  const supabase = await createClient();
+  if (starred) {
+    // user_id is filled in by the database (default auth.uid()).
+    await supabase.from("stars").insert({ assignment_id: assignmentId });
+  } else {
+    // Row Level Security limits this to the logged-in user's own star.
+    await supabase.from("stars").delete().eq("assignment_id", assignmentId);
+  }
+  revalidatePath("/");
+  revalidatePath(`/assignments/${assignmentId}`);
+}
+
 export async function setAssignmentDone(id: string, isDone: boolean) {
   const supabase = await createClient();
   await supabase.from("assignments").update({ is_done: isDone }).eq("id", id);
