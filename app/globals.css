@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Dark theme, inspired by Linear (see PLAN.md, section 6). */
+:root {
+  --background: #0e0e12;
+  --surface: #17171d;
+  --foreground: #e8e8ec;
+  --muted: #8b8b96;
+  --accent: #6e79f2;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
