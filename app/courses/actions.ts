@@ -2,9 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { validateCourseName } from "@/lib/validation";
 import { COURSE_COLORS } from "./colors";
 
-export type CourseFormState = { error?: string; savedAt?: number };
+export type CourseFormState = {
+  error?: string;
+  nameError?: string;
+  // Changes on every submit, so the form remounts (cleared, or showing `values`).
+  savedAt?: number;
+  // What the user typed, so the form can show it again after an error.
+  values?: { name: string; code: string; instructor: string; color: string };
+};
 
 export async function addCourse(
   _prev: CourseFormState,
@@ -15,8 +23,11 @@ export async function addCourse(
   const instructor = String(formData.get("instructor") ?? "").trim();
   const color = String(formData.get("color") ?? "");
 
-  if (!name) {
-    return { error: "Please enter a course name." };
+  const values = { name, code, instructor, color };
+
+  const nameError = validateCourseName(name);
+  if (nameError) {
+    return { nameError, values, savedAt: Date.now() };
   }
 
   const supabase = await createClient();
@@ -28,7 +39,7 @@ export async function addCourse(
     color: COURSE_COLORS.includes(color) ? color : COURSE_COLORS[0],
   });
   if (error) {
-    return { error: "Couldn't save the course. Please try again." };
+    return { error: "Couldn't save the course. Please try again.", values, savedAt: Date.now() };
   }
 
   revalidatePath("/courses");
