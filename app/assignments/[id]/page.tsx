@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { AppHeader } from "@/components/app-header";
 import { ASSIGNMENT_COLUMNS, formatDueDate, type Assignment } from "../shared";
 import { DeleteButton } from "../delete-button";
+import { StarButton } from "../star-button";
 
 export default function AssignmentPage({ params }: PageProps<"/assignments/[id]">) {
   return (
@@ -20,11 +21,10 @@ async function AssignmentDetail({ params }: { params: Promise<{ id: string }> })
   const { id } = await params;
   const { supabase, email } = await requireUser();
   // Row Level Security: someone else's assignment id returns nothing (404).
-  const { data } = await supabase
-    .from("assignments")
-    .select(ASSIGNMENT_COLUMNS)
-    .eq("id", id)
-    .maybeSingle();
+  const [{ data }, { data: star }] = await Promise.all([
+    supabase.from("assignments").select(ASSIGNMENT_COLUMNS).eq("id", id).maybeSingle(),
+    supabase.from("stars").select("id").eq("assignment_id", id).maybeSingle(),
+  ]);
   if (!data) {
     notFound();
   }
@@ -46,7 +46,10 @@ async function AssignmentDetail({ params }: { params: Promise<{ id: string }> })
             />
             {assignment.courses?.name}
           </p>
-          <h1 className="text-2xl font-semibold">{assignment.title}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold">{assignment.title}</h1>
+            <StarButton id={assignment.id} starred={Boolean(star)} />
+          </div>
         </div>
 
         <dl className="grid grid-cols-3 gap-4 text-sm">

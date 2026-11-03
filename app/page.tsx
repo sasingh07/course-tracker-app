@@ -8,27 +8,42 @@ import {
   type Assignment,
 } from "@/app/assignments/shared";
 import { DoneCheckbox } from "@/app/assignments/done-checkbox";
+import { StarButton } from "@/app/assignments/star-button";
 
-export default function Home() {
+export default function Home({ searchParams }: PageProps<"/">) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-10">
       <Suspense fallback={<p className="text-muted">Loading…</p>}>
-        <AssignmentList />
+        <AssignmentList searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
 // Reads the login session, so it sits behind <Suspense> (Next.js 16 rule).
-async function AssignmentList() {
+async function AssignmentList({
+  searchParams,
+}: {
+  searchParams: PageProps<"/">["searchParams"];
+}) {
+  const { view } = await searchParams;
+  const showStarred = view === "starred";
   const { supabase, email } = await requireUser();
-  // Row Level Security means this only returns the logged-in user's assignments.
-  const { data, error } = await supabase
-    .from("assignments")
-    .select(ASSIGNMENT_COLUMNS)
-    .order("due_date")
-    .order("created_at");
-  const assignments = (data ?? []) as unknown as Assignment[];
+
+  // Row Level Security means both only return the logged-in user's rows.
+  const [{ data, error }, { data: stars }] = await Promise.all([
+    supabase
+      .from("assignments")
+      .select(ASSIGNMENT_COLUMNS)
+      .order("due_date")
+      .order("created_at"),
+    supabase.from("stars").select("assignment_id"),
+  ]);
+  const allAssignments = (data ?? []) as unknown as Assignment[];
+  const starredIds = new Set((stars ?? []).map((s) => s.assignment_id as string));
+  const assignments = showStarred
+    ? allAssignments.filter((a) => starredIds.has(a.id))
+    : allAssignments;
 
   return (
     <>
@@ -43,13 +58,22 @@ async function AssignmentList() {
         </Link>
       </div>
 
+      <nav className="mb-4 flex gap-1 text-sm" aria-label="Filter assignments">
+        <ViewTab href="/" active={!showStarred}>
+          All ({allAssignments.length})
+        </ViewTab>
+        <ViewTab href="/?view=starred" active={showStarred}>
+          Starred ★ ({starredIds.size})
+        </ViewTab>
+      </nav>
+
       {error && (
         <p role="alert" className="mb-6 text-sm text-red-400">
           Couldn&apos;t load your assignments. Please refresh the page.
         </p>
       )}
 
-      {!error && assignments.length === 0 && (
+      {!error && assignments.length === 0 && !showStarred && (
         <p className="text-muted">
           No assignments yet. Click &ldquo;New assignment&rdquo; to add one (you&apos;ll
           need at least one{" "}
@@ -57,6 +81,12 @@ async function AssignmentList() {
             course
           </Link>
           ).
+        </p>
+      )}
+
+      {!error && assignments.length === 0 && showStarred && (
+        <p className="text-muted">
+          No starred assignments yet. Click ☆ next to a midterm or project to star it.
         </p>
       )}
 
@@ -84,10 +114,33 @@ async function AssignmentList() {
               <span className="w-24 text-right text-sm text-muted">
                 {formatDueDate(a.due_date)}
               </span>
+              <StarButton id={a.id} starred={starredIds.has(a.id)} />
             </li>
           ))}
         </ul>
       )}
     </>
+  );
+}
+
+function ViewTab({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`rounded-md px-3 py-1.5 ${
+        active ? "bg-surface text-foreground" : "text-muted hover:text-foreground"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
