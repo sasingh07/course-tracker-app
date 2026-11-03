@@ -16,12 +16,13 @@ export type Assignment = {
   due_date: string; // "YYYY-MM-DD"
   is_done: boolean;
   notes: string | null;
+  estimated_hours: number | null;
   courses: { name: string; color: string } | null;
 };
 
 // The columns every assignment page needs, including its course.
 export const ASSIGNMENT_COLUMNS =
-  "id, course_id, title, type, due_date, is_done, notes, courses(name, color)";
+  "id, course_id, title, type, due_date, is_done, notes, estimated_hours, courses(name, color)";
 
 // "2026-11-14" -> "Sat, Nov 14". Due dates have no time, so use UTC to avoid
 // the date shifting by a day in some time zones.
@@ -32,4 +33,9 @@ export function formatDueDate(dueDate: string) {
     day: "numeric",
     timeZone: "UTC",
   });
+}
+
+// 2 -> "2h", 1.5 -> "1.5h"
+export function formatHours(hours: number | null) {
+  return hours === null ? "" : `${Number(hours)}h`;
 }

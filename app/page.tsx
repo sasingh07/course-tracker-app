@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/app-header";
 import {
   ASSIGNMENT_COLUMNS,
   formatDueDate,
+  formatHours,
   type Assignment,
 } from "@/app/assignments/shared";
 import {
@@ -120,6 +121,9 @@ async function AssignmentList({
               </Link>
               <span className="hidden text-xs capitalize text-muted sm:inline">
                 {a.type}
+              </span>
+              <span className="w-10 text-right text-xs text-muted">
+                {formatHours(a.estimated_hours)}
               </span>
               <span className="w-24 text-right text-sm text-muted">
                 {formatDueDate(a.due_date)}

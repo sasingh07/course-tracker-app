@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import type { AssignmentFormState } from "./actions";
 import { ASSIGNMENT_TYPES, type Assignment } from "./shared";
-import { TITLE_MAX_LENGTH } from "@/lib/validation";
+import { HOURS_MAX, HOURS_MIN, TITLE_MAX_LENGTH } from "@/lib/validation";
 
 const inputClass =
   "rounded-md border bg-background px-3 py-2 outline-none focus:border-accent";
@@ -91,7 +91,7 @@ export function AssignmentForm({
         <FieldError id="title-error" message={errors.title} />
       </label>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm">
           Type
           <select
@@ -117,6 +117,23 @@ export function AssignmentForm({
             className={`${inputClass} ${borderFor(errors.due_date)} [color-scheme:dark]`}
           />
           <FieldError id="due-date-error" message={errors.due_date} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          Estimated hours
+          <input
+            name="estimated_hours"
+            type="number"
+            inputMode="decimal"
+            step={0.5}
+            min={HOURS_MIN}
+            max={HOURS_MAX}
+            placeholder="e.g. 3"
+            defaultValue={values?.estimated_hours ?? ""}
+            aria-invalid={Boolean(errors.estimated_hours)}
+            aria-describedby="hours-error"
+            className={`${inputClass} ${borderFor(errors.estimated_hours)}`}
+          />
+          <FieldError id="hours-error" message={errors.estimated_hours} />
         </label>
       </div>
 

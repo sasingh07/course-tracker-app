@@ -26,6 +26,15 @@ function readAssignment(formData: FormData): AssignmentInput {
     type: String(formData.get("type") ?? "homework"),
     due_date: String(formData.get("due_date") ?? ""),
     notes: notes || null,
+    estimated_hours: String(formData.get("estimated_hours") ?? "").trim(),
+  };
+}
+
+// The form sends hours as text; the database stores a number (or null).
+function toRow(values: AssignmentInput) {
+  return {
+    ...values,
+    estimated_hours: values.estimated_hours === "" ? null : Number(values.estimated_hours),
   };
 }
 
@@ -43,7 +52,7 @@ export async function createAssignment(
   // user_id is filled in by the database (default auth.uid()).
   const { data, error } = await supabase
     .from("assignments")
-    .insert(values)
+    .insert(toRow(values))
     .select("id")
     .single();
   if (error) {
@@ -65,7 +74,7 @@ export async function updateAssignment(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("assignments").update(values).eq("id", id);
+  const { error } = await supabase.from("assignments").update(toRow(values)).eq("id", id);
   if (error) {
     return { error: "Couldn't save your changes. Please try again.", values, attempt: Date.now() };
   }

@@ -17,7 +17,7 @@ export default function DashboardPage() {
 async function Dashboard() {
   const { supabase, email } = await requireUser();
   // Row Level Security means this only returns the logged-in user's assignments.
-  const { data, error } = await supabase.from("assignments").select("due_date, is_done");
+  const { data, error } = await supabase.from("assignments").select("due_date, is_done, estimated_hours");
 
   const today = todayInBerkeley();
   const stats = computeStats(data ?? [], today);
@@ -34,7 +34,7 @@ async function Dashboard() {
         </p>
       )}
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-3">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2">
         <StatCard label="Due this week" value={String(stats.dueThisWeek)} />
         <StatCard
           label="Completed this week"
@@ -48,6 +48,11 @@ async function Dashboard() {
           }
         />
         <StatCard
+          label="Hours due this week"
+          value={`${stats.hoursThisWeek}h`}
+          detail="From estimated hours"
+        />
+        <StatCard
           label="Busiest upcoming week"
           value={stats.busiestWeek ? `Week of ${stats.busiestWeek.label}` : "—"}
           detail={
@@ -59,9 +64,7 @@ async function Dashboard() {
       </div>
 
       <section className="rounded-xl border border-white/10 bg-surface p-6">
-        <h2 className="mb-1 font-medium">Assignments due per week</h2>
-        <p className="mb-4 text-sm text-muted">Fall 2026, weeks start on Monday</p>
-        <WeeklyChart weeks={stats.weeks} thisWeekLabel={thisWeekLabel} />
+                <WeeklyChart weeks={stats.weeks} thisWeekLabel={thisWeekLabel} />
       </section>
     </>
   );
