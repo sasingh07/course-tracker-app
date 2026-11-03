@@ -1,8 +1,7 @@
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
-import { connection } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { logout } from "@/app/auth/actions";
+import Link from "next/link";
+import { requireUser } from "@/lib/auth";
+import { AppHeader } from "@/components/app-header";
 
 export default function Home() {
   return (
@@ -16,32 +15,17 @@ export default function Home() {
 
 // Reads the login session, so it sits behind <Suspense> (Next.js 16 rule).
 async function Welcome() {
-  // Render per request: the Supabase client reads the clock (Date.now()).
-  await connection();
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) {
-    redirect("/login");
-  }
+  const { email } = await requireUser();
 
   return (
     <>
-      <header className="mb-10 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Course Tracker</h1>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-muted">{data.claims.email}</span>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="rounded-md border border-white/10 px-3 py-1.5 hover:bg-surface"
-            >
-              Log out
-            </button>
-          </form>
-        </div>
-      </header>
+      <AppHeader email={email} />
       <p className="text-muted">
-        You&apos;re logged in. Courses and assignments are coming next.
+        You&apos;re logged in. Start by adding your{" "}
+        <Link href="/courses" className="text-accent hover:underline">
+          courses
+        </Link>
+        . Assignments are coming next.
       </p>
     </>
   );
