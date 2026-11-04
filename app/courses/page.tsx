@@ -1,7 +1,9 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { AppHeader } from "@/components/app-header";
 import { CourseForm } from "./course-form";
+import { addCourse } from "./actions";
 
 export default function CoursesPage() {
   return (
@@ -46,15 +48,25 @@ async function Courses() {
               />
               <span className="font-medium">{course.name}</span>
               {course.code && <span className="text-sm text-muted">{course.code}</span>}
-              {course.instructor && (
-                <span className="ml-auto text-sm text-muted">{course.instructor}</span>
-              )}
+              <span className="ml-auto text-sm text-muted">{course.instructor}</span>
+              <Link
+                href={`/courses/${course.id}/edit`}
+                aria-label={`Edit ${course.name}`}
+                className="rounded-md border border-white/10 px-3 py-1 text-sm text-muted hover:bg-background hover:text-foreground"
+              >
+                Edit
+              </Link>
             </li>
           ))}
         </ul>
       )}
 
-      <CourseForm />
+      <CourseForm
+        action={addCourse}
+        title="Add a course"
+        submitLabel="Add course"
+        pendingLabel="Adding…"
+      />
     </>
   );
 }
