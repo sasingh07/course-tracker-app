@@ -117,3 +117,25 @@ erDiagram
 
 - **Least sure I can build:** CSV import (feature 10). Files can have missing columns, odd date formats, or course names that don't match.
 - **Cut first if I run out of time:** CSV import, replaced with a smaller feature (a "due soon" banner for anything due in the next 3 days) so I still ship 3 of my own features.
+
+---
+
+## Plan vs. Reality
+
+*Added at the end of the project. Everything above this line is my original plan, unchanged.*
+
+| Planned feature | Shipped / Changed / Cut | Status | Learning | What changed and why (one line) |
+|---|---|---|---|---|
+| 1. Sign up and login | Shipped (changed) | Done | It was interesting to see the amount of setup needed for a seemingly simple task such as sign up or login: connecting through the Supabase project, initiating keys in the local environment, seeking out the right URL etc. Equally important to double-check config values before assuming the code is broken | Email confirmation turned **off** on purpose so classmates can try the app instantly; caught a Next.js 16 "Date.now() while prerendering" error and fixed it. |
+| 2. Data model | Shipped (changed) | Done | Dependencies decide build order. Assignments can't exist without courses, so I had to build a courses page earlier than planned | Added a simple "My courses" page here, since assignments need courses to exist first; IDs became UUIDs and `created_at` became date + time (Supabase defaults). |
+| 3. Create / read / update / delete | Shipped (changed) | Done | Thinking about how I'd use the app each week showed me features the plan initially missed, like ticking the assignments done straight from the list | Home page became the assignment list, and I added a done checkbox right on the list for quick weekly check-ins. |
+| 4. Validation | Shipped (changed) | Done | Checking only the 'happy path' isn't enough: submitting bad data on purpose revealed a bug where the dropdowns reset after an error | Went beyond "not blank": due dates must be in this academic year and titles ≤ 120 characters; fixed a bug where dropdowns reset after an error. |
+| 5. Stars | Shipped | Done | One 'stars' table links any user to any assignment, so one table handles everyone's stars instead of one table per user | Starred view became an `All / Starred ★` tab on the home page instead of a separate page. |
+| 6. Find things | Shipped (changed) | Done | Filters live in the URL, so refresh or the back button doesn't lose them | Search updates as you type, the list defaults to "Not done", and "Sort by weight" became "Newest added" because I removed `weight_percent` while planning. |
+| 7. Dashboard | Shipped (changed) | Done | Incorporating a time element to the app means that it's important to define "what day is it?", which in turn depends on where the server is | Weeks start Monday and the chart covers the whole semester; "today" uses Berkeley time because Vercel's servers run on UTC. |
+| 8. Estimated hours | Shipped (changed) | Done | "Hours due" is a better workload measure than "number of assignments" because longer assignments require more upfront planning | Limited to 0.5–100 in half-hour steps, and added a 4th dashboard card plus an `Assignments / Hours` chart toggle. |
+| 9. Crunch-week warning | Shipped (changed) | Done | I defined 'crunch' precisely: 'more than 15' and '15 or more' give different answers | Shows as a banner on the assignment list *and* the dashboard (red bars + a 15h line), counting all hours due that week. |
+| 10. CSV import | Shipped (changed) | Done | This feature requires a lot of interaction with the user, hence the importance of a preview table: a preview lets me catch bad rows before they're saved | My riskiest feature shipped without the planned cut; added a preview table that skips bad rows, a template, and US-style dates; a stale dev build crashed the first import. |
+| Test 1: data isolation | Shipped (changed) | Done | A test only proves something if you've seen it fail | Tests the real database security rules with two test users (5 checks); red run by temporarily adding an "anyone can read" rule. |
+| Test 2: dashboard stat | Shipped (changed) | Done | A test must give the same answer every day, so instead of using the real date I fixed "today" to Nov 3 | Exactly the planned scenario (3 due, 67%) plus two edge cases; red run by removing the "this week" filter. |
+| Backup: "due soon" banner | Cut | Backlogged | Having a named fallback made it less risky to attempt the hardest feature | Not needed: it was only the fallback if CSV import was cut. |
