@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
-import { addCourse, type CourseFormState } from "./actions";
+import type { CourseFormState } from "./actions";
 import { COURSE_COLORS } from "./colors";
 
 const inputClass =
@@ -9,11 +10,30 @@ const inputClass =
 const inputErrorClass =
   "rounded-md border border-red-400 bg-background px-3 py-2 outline-none focus:border-accent";
 
-export function CourseForm() {
+type Course = { name: string; code: string | null; instructor: string | null; color: string };
+
+// Used by both "Add a course" and "Edit course".
+export function CourseForm({
+  action,
+  course,
+  title,
+  submitLabel,
+  pendingLabel,
+  cancelHref,
+}: {
+  action: (prev: CourseFormState, formData: FormData) => Promise<CourseFormState>;
+  course?: Course;
+  title: string;
+  submitLabel: string;
+  pendingLabel: string;
+  cancelHref?: string;
+}) {
   const [state, formAction, pending] = useActionState<CourseFormState, FormData>(
-    addCourse,
+    action,
     {},
   );
+  // After an error, show what the user typed instead of the saved values.
+  const values = state.values ?? course;
 
   return (
     // Remount after every submit: cleared after a save, or showing `values` after an error.
@@ -22,7 +42,7 @@ export function CourseForm() {
       action={formAction}
       className="flex flex-col gap-4 rounded-xl border border-white/10 bg-surface p-6"
     >
-      <h2 className="font-medium">Add a course</h2>
+      <h2 className="font-medium">{title}</h2>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm">
@@ -30,7 +50,7 @@ export function CourseForm() {
           <input
             name="name"
             placeholder="Intro to Coding"
-            defaultValue={state.values?.name}
+            defaultValue={values?.name}
             aria-invalid={Boolean(state.nameError)}
             aria-describedby="name-error"
             className={state.nameError ? inputErrorClass : inputClass}
@@ -46,7 +66,7 @@ export function CourseForm() {
           <input
             name="code"
             placeholder="UGBA 196"
-            defaultValue={state.values?.code}
+            defaultValue={values?.code ?? ""}
             className={inputClass}
           />
         </label>
@@ -54,7 +74,7 @@ export function CourseForm() {
           Instructor
           <input
             name="instructor"
-            defaultValue={state.values?.instructor}
+            defaultValue={values?.instructor ?? ""}
             className={inputClass}
           />
         </label>
@@ -69,9 +89,7 @@ export function CourseForm() {
                 type="radio"
                 name="color"
                 value={color}
-                defaultChecked={
-                  state.values ? state.values.color === color : i === 0
-                }
+                defaultChecked={values ? values.color === color : i === 0}
                 className="peer sr-only"
               />
               <span
@@ -90,13 +108,23 @@ export function CourseForm() {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="self-start rounded-md bg-accent px-4 py-2 font-medium text-white hover:opacity-90 disabled:opacity-50"
-      >
-        {pending ? "Adding…" : "Add course"}
-      </button>
+      <div className="flex gap-3">
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-md bg-accent px-4 py-2 font-medium text-white hover:opacity-90 disabled:opacity-50"
+        >
+          {pending ? pendingLabel : submitLabel}
+        </button>
+        {cancelHref && (
+          <Link
+            href={cancelHref}
+            className="rounded-md border border-white/10 px-4 py-2 hover:bg-background"
+          >
+            Cancel
+          </Link>
+        )}
+      </div>
     </form>
   );
 }
